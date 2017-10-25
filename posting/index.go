@@ -386,6 +386,7 @@ func deleteEntries(prefix []byte) error {
 
 	for idxIt.Seek(prefix); idxIt.ValidForPrefix(prefix); idxIt.Next() {
 		item := idxIt.Item()
+		fmt.Printf("===> purging key: %q %d\n", item.Key(), item.Version())
 		if err := pstore.PurgeVersionsBelow(item.Key(), item.Version()+1); err != nil {
 			return err
 		}
@@ -748,6 +749,7 @@ func (txn *Txn) RebuildIndex(ctx context.Context, attr string) {
 }
 
 func DeleteAll() error {
+	fmt.Println("got to delete all")
 	if err := lcache.clear(func([]byte) bool { return true }); err != nil {
 		return err
 	}

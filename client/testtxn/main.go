@@ -41,27 +41,28 @@ func main() {
 
 	ctx := context.Background()
 
-	op := &protos.Operation{}
-	op.Schema = `name: string @index(fulltext) .`
-	x.Check(dg.Alter(ctx, op))
+	// op := &protos.Operation{}
+	// op.Schema = `name: string @index(fulltext) .`
+	// x.Check(dg.Alter(ctx, op))
 
-	TestTxnRead1(ctx, dg)
-	TestTxnRead2(ctx, dg)
+	// TestTxnRead1(ctx, dg)
+	// TestTxnRead2(ctx, dg)
 
-	op = &protos.Operation{}
-	op.DropAttr = "name"
-	x.Check(dg.Alter(ctx, op))
+	// op = &protos.Operation{}
+	// op.DropAttr = "name"
+	// x.Check(dg.Alter(ctx, op))
 
-	TestTxnRead3(ctx, dg)
-	TestTxnRead4(ctx, dg)
+	// TestTxnRead3(ctx, dg)
+	// TestTxnRead4(ctx, dg)
 
-	op = &protos.Operation{}
-	op.DropAll = true
-	x.Check(dg.Alter(ctx, op))
+	// op = &protos.Operation{}
+	// op.DropAll = true
+	// x.Check(dg.Alter(ctx, op))
 
-	TestConflict(ctx, dg)
-	TestConflictTimeout(ctx, dg)
-	TestConflictTimeout2(ctx, dg)
+	TestTxnAbort(ctx, dg)
+	// TestConflict(ctx, dg)
+	// TestConflictTimeout(ctx, dg)
+	// TestConflictTimeout2(ctx, dg)
 }
 
 // readTs == startTs
@@ -200,6 +201,45 @@ func TestTxnRead4(ctx context.Context, dg *client.Dgraph) {
 		log.Fatalf("Error while running query: %v\n", err)
 	}
 	x.AssertTrue(bytes.Equal(resp.Json, []byte("{\"data\": {\"me\":[{\"name\":\"Manish2\"}]}}")))
+}
+
+func TestTxnAbort(ctx context.Context, dg *client.Dgraph) {
+	fmt.Println("TestTxnAbort")
+
+	{
+		txn := dg.NewTxn()
+		resp, err := txn.Query(ctx, `{ me(func: anyoftext(name, "Manish")) { _uid_ }}`, nil)
+		fmt.Printf("Got reponse: %v %q\n", err, resp)
+	}
+
+	op := &protos.Operation{}
+	op.Schema = `name: string @index(fulltext) .`
+	x.Check(dg.Alter(ctx, op))
+
+	txn := dg.NewTxn()
+	mu := &protos.Mutation{}
+	mu.SetJson = []byte(`{"name": "Manish"}`)
+	assigned, err := txn.Mutate(ctx, mu)
+	if err != nil {
+		log.Fatalf("Error while running mutation: %v\n", err)
+	}
+	if len(assigned.Uids) != 1 {
+		log.Fatalf("Error. Nothing assigned. %+v\n", assigned)
+	}
+	op = &protos.Operation{}
+	// op.DropAttr = "name"
+	op.DropAll = true
+	x.Check(dg.Alter(ctx, op))
+
+	err = txn.Commit(ctx)
+	fmt.Printf("This should throw error: %v\n", err)
+	if err == nil {
+		txn = dg.NewTxn()
+		resp, err := txn.Query(ctx, `{ me(func: anyoftext(name, "Manish")) { _uid_ }}`, nil)
+		x.Check(err)
+		fmt.Printf("Got reponse: %q\n", resp.Json)
+	}
+	x.Check(err)
 }
 
 func TestConflict(ctx context.Context, dg *client.Dgraph) {

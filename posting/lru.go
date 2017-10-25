@@ -22,6 +22,7 @@ package posting
 import (
 	"container/list"
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/dgraph-io/dgraph/x"
@@ -200,6 +201,7 @@ func (c *listCache) clear(remove func(key []byte) bool) error {
 		if !remove(kv.pl.key) {
 			continue
 		}
+		fmt.Printf("Deleting key from listcache: %q\n", k)
 
 		c.ll.Remove(e)
 		kv.pl.SetForDeletion()

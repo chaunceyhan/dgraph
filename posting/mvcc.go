@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"sort"
 	"sync"
@@ -127,6 +128,7 @@ func (t *Txn) fill(ctx *protos.TxnContext) {
 // TODO: Use commitAsync
 // Don't call this for schema mutations. Directly commit them.
 func (tx *Txn) CommitMutations(ctx context.Context, commitTs uint64, writeLock bool) error {
+	fmt.Printf("==========> COMMIT MUTATION: %d\n", commitTs)
 	tx.Lock()
 	defer tx.Unlock()
 	if tx.HasConflict() {
@@ -210,6 +212,7 @@ func (tx *Txn) CommitMutationsMemory(ctx context.Context, commitTs uint64) error
 
 func (tx *Txn) commitMutationsMemory(ctx context.Context, commitTs uint64) error {
 	for _, d := range tx.deltas {
+		fmt.Printf("tx.delta: %+v\n", d)
 		plist := Get(d.key)
 		if err := plist.CommitMutation(ctx, tx.StartTs, commitTs); err != nil {
 			return err
@@ -331,6 +334,7 @@ func ReadPostingList(key []byte, it *badger.Iterator) (*List, error) {
 }
 
 func getNew(key []byte, pstore *badger.ManagedDB) (*List, error) {
+	fmt.Printf("getNew for key: %q\n", key)
 	txn := pstore.NewTransactionAt(math.MaxUint64, false)
 	defer txn.Discard()
 

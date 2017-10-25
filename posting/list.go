@@ -493,6 +493,7 @@ func (l *List) commitMutation(ctx context.Context, startTs, commitTs uint64) err
 	}
 
 	l.AssertLock()
+	fmt.Printf("commitMutation: list has: %d,%d. Want: %d,%d\n", l.startTs, l.commitTs, startTs, commitTs)
 	if l.startTs == 0 && l.commitTs == commitTs {
 		return nil
 	}
@@ -694,6 +695,7 @@ func (l *List) SyncIfDirty(delFromCache bool) (committed bool, err error) {
 
 // Merge mutation layer and immutable layer.
 func (l *List) syncIfDirty(delFromCache bool) (committed bool, err error) {
+	fmt.Println("________syncifDirty")
 	// deleteAll is used to differentiate when we don't have any updates, v/s
 	// when we have explicitly deleted everything.
 	if len(l.mlayer) == 0 && atomic.LoadInt32(&l.deleteAll) == 0 {
