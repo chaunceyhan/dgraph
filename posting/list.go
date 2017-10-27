@@ -500,6 +500,10 @@ func (l *List) commitMutation(ctx context.Context, startTs, commitTs uint64) err
 	}
 
 	l.AssertLock()
+	if l.startTs > commitTs || l.commitTs > commitTs {
+		// Txn got committed and new one has started.
+		return nil
+	}
 	if l.startTs == 0 && l.commitTs == commitTs {
 		return nil
 	}
@@ -735,9 +739,6 @@ func (l *List) rollup() (*protos.PostingList, error) {
 	buf := make([]uint64, 0, bp128.BlockSize)
 
 	err := l.iterate(math.MaxUint64, 0, func(p *protos.Posting) bool {
-		if p.Commit > l.commitTs {
-			l.commitTs = p.Commit
-		}
 		buf = append(buf, p.Uid)
 		if len(buf) == bp128.BlockSize {
 			bp.PackAppend(buf)
